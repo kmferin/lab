@@ -1,5 +1,5 @@
 getwd()
-setwd()
+setwd("/Users/kmferin/Desktop/Agron_590/forked_lab/week_07/dataframes")
 
 library(readr) 
 crops<-read_csv("NASS-Iowa.csv")  #ctr+enter will run the line you are on 
@@ -10,11 +10,11 @@ tail(crops)  # BTW, hashtag is used to insert commments
 #Let's get rid of some columns
 
   #Choose the column you want to keep
-  less_columns<-crops[,c("Year", "State", "Commodity", "Data.Item", "Value")]
+  less_columns<-crops[,c("Year", "State", "Commodity", "Data Item", "Value")]
 
   #Choose columns you don't want to keep
-  fewer_columns<-crops[, -c("Program", "Year", "Period", "Week.Ending", 
-                        "Geo.Level", "State.ANSI", "Ag.Distric")]  
+  fewer_columns<-crops[, -c("Program", "Year", "Period", "Week Ending", 
+                        "Geo Level", "State ANSI", "Ag Distric")]  
 
   #Can also specify by column number  
   notsomany_columns<-crops[,c(2, 6, 16 ,17, 20)]
@@ -28,7 +28,7 @@ tail(crops)  # BTW, hashtag is used to insert commments
   recent<-less_columns[1:6819,]  
   
 #Now let's subset soybeans  
-  beans<-recent[recent$Commodity == "SOYBEANS" & recent$Data.Item == "SOYBEANS - YIELD, MEASURED IN BU / ACRE",]  
+  beans<-recent[recent$Commodity == "SOYBEANS" & recent$'Data Item' == "SOYBEANS - YIELD, MEASURED IN BU / ACRE",]  
   
 #These columns names are driving me crazy  
   colnames(beans)<-c("year", "state", "commodity", "measure", "bu_acre")  
@@ -70,7 +70,7 @@ ggplot(beans, aes(x=year, y=bu_acre))+
 #More subsetting  
 
 smlgrains<-less_columns[less_columns$Commodity %in% c("OATS", "BARLEY", "WHEAT", "RYE") & 
-                          less_columns$Data.Item %in% c("OATS - ACRES HARVESTED","BARLEY - ACRES HARVESTED",
+                          less_columns$'Data Item' %in% c("OATS - ACRES HARVESTED","BARLEY - ACRES HARVESTED",
                                                        "WHEAT - ACRES HARVESTED","RYE - ACRES HARVESTED"),]
 
 smlgrains$Value<-as.numeric(smlgrains$Value)
