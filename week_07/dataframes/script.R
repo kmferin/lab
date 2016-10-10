@@ -1,47 +1,62 @@
+Skip to content
+This repository
+Search
+Pull requests
+Issues
+Gist
+@kmferin
+Watch 2
+Star 0
+Fork 14 agron590-ISU/lab
+Code  Issues 0  Pull requests 1  Projects 0  Wiki  Pulse  Graphs
+Branch: master Find file Copy pathlab/week_07/dataframes/script.R
+ddd9752  4 days ago
+@Ranae Ranae Added a description at the top
+1 contributor
+RawBlameHistory     
+148 lines (106 sloc)  5.29 KB
+#This script is meant to illustrate subsetting and does not necessarily demostrate the most efficient coding
+#practices. Here we import a dataset from National Agricultural Statitistics Service 
+#(NASS, https://quickstats.nass.usda.gov/) that focuses on field crops in Iowa.
+
+#Use this to check and set your working directory (or toolbar in RStudio)
 getwd()
-setwd("/Users/kmferin/Desktop/Agron_590/forked_lab/week_07/dataframes")
+#setwd()
 
 library(readr) 
-crops<-read_csv("NASS-Iowa.csv")  #ctr+enter will run the line you are on 
+crops<-read_csv("NASS-Iowa.csv")  #ctr+enter or command+enter will run the line you are on 
 
-head(crops)  #I like to glance at the data
+head(crops)  #If you want to glance at the data
 tail(crops)  # BTW, hashtag is used to insert commments
 
 #Let's get rid of some columns
 
-  #Choose the column you want to keep
-  less_columns<-crops[,c("Year", "State", "Commodity", "Data Item", "Value")]
+#Choose the columns you want to keep
+fewer_columns<-crops[,c("Year", "State", "Commodity", "Data Item", "Value")]
 
-  #Choose columns you don't want to keep
-  fewer_columns<-crops[, -c("Program", "Year", "Period", "Week Ending", 
-                        "Geo Level", "State ANSI", "Ag Distric")]  
+#Can also specify by column number  
+notsomany_columns<-crops[,c(2, 6, 16 ,17, 20)]
 
-  #Can also specify by column number  
-  notsomany_columns<-crops[,c(2, 6, 16 ,17, 20)]
+#Let's get rid of some rows - like everything, there are a lot of ways to do the same thing 
 
-#Let's get rid of some rows - like everything, there are a lot of ways 
-  
-  recent<-less_columns[less_columns$Year != 1866, ]
-  
-  recent<-less_columns[less_columns$Year %in% c(1867:2015),]  
-  
-  recent<-less_columns[1:6819,]  
-  
-#Now let's subset soybeans  
-  beans<-recent[recent$Commodity == "SOYBEANS" & recent$'Data Item' == "SOYBEANS - YIELD, MEASURED IN BU / ACRE",]  
-  
-#These columns names are driving me crazy  
-  colnames(beans)<-c("year", "state", "commodity", "measure", "bu_acre")  
-  beans<-beans[,-4]
-  
-#I have some class problems
-  beans$bu_acre<-as.numeric(beans$bu_acre)
-  beans$year<-as.numeric(beans$year)  
-  
-#Add a unit conversion  
-  beans$Mg_ha<-beans$bu_acre*60*0.00045*0.40
- 
-#Fit a linear model 
+recent<-fewer_columns[fewer_columns$Year != 1866, ]
+
+recent<-fewer_columns[fewer_columns$Year %in% c(1867:2015),]  
+
+recent<-fewer_columns[1:6819,]  
+
+#Now let's subset soybeans, just bushels per acre  
+beans<-recent[recent$Commodity == "SOYBEANS" & 
+                recent$`Data Item` == "SOYBEANS - YIELD, MEASURED IN BU / ACRE",]  
+
+#These columns names are driving me crazy, let's rename  
+colnames(beans)<-c("year", "state", "commodity", "measure", "bu_acre")  
+beans<-beans[,-4] #We don't even need this column, let's remove
+
+#Add a unit conversion as a new column
+beans$Mg_ha<-beans$bu_acre*60*0.00045*0.40
+
+#Fit a linear model to examine the relationship between time and yield
 mod<-lm(beans$bu_acre ~ beans$year)
 
 #Look at the summary
@@ -56,25 +71,97 @@ summary(mod)$coefficients
 #Extract the p-value
 summary(mod)$coefficients[,4] 
 
-#Extract the r squared
+#Extract the R squared
 summary(mod)$r.squared
 
-#Something that was extracted being useful
+#Here is something that was extracted (R^2) being useful
 library(ggplot2)
 
 ggplot(beans, aes(x=year, y=bu_acre))+
   geom_point()+
   geom_smooth(method='lm')+
-  annotate("text", x=1940, y=50, label = summary(mod)$r.squared, size=5, parse=TRUE)  
+  annotate("text", x=1940, y=50, label = summary(mod)$r.squared, size=5, parse=TRUE)
 
-#More subsetting  
 
-smlgrains<-less_columns[less_columns$Commodity %in% c("OATS", "BARLEY", "WHEAT", "RYE") & 
-                          less_columns$'Data Item' %in% c("OATS - ACRES HARVESTED","BARLEY - ACRES HARVESTED",
-                                                       "WHEAT - ACRES HARVESTED","RYE - ACRES HARVESTED"),]
+#######################################################
+#Now let's subset grain corn, just bushels per acre  
+corn<-recent[recent$Commodity == "CORN" & 
+               recent$`Data Item` == "CORN, GRAIN - YIELD, MEASURED IN BU / ACRE",]  
 
-smlgrains$Value<-as.numeric(smlgrains$Value)
+#These columns names are driving me crazy, let's rename  
+colnames(corn)<-c("year", "state", "commodity", "measure", "bu_acre")  
+corn<-corn[,-4] #We don't even need this column, let's remove  
 
+ggplot(corn, aes(x=year, y=bu_acre))+
+  geom_point()
+
+#Let's add a column to define "prehybrid", "old" and "new" era corn
+corn$era[corn$year %in% c(1867:1940)]<-"prehybrid"
+corn$era[corn$year %in% c(1941:1990)]<-"old"
+corn$era[corn$year %in% c(1991:2015)]<-"new"
+
+ggplot(corn, aes(x=year, y=bu_acre, group=era, color=era))+
+  geom_point()+
+  geom_smooth(method=lm)
+
+
+####Fit lines to the data and look at the differences in slopes  
+library(nlme) #We'll need this for a minute (lmList)
+mod<-lmList(bu_acre ~ year | era, data=corn)
+
+#And here we extract the actual slopes
+coef(mod)[2]
+
+#To determine if the slopes are actually different, we would need STATISTICS
+
+#######################################################
+#Now we want to look at small grains as a group
+#Subset most of the small grains listed
+smlgrains<-fewer_columns[fewer_columns$Commodity %in% c("OATS", "BARLEY", "WHEAT", "RYE") & 
+                           fewer_columns$`Data Item` %in% c("OATS - ACRES HARVESTED","BARLEY - ACRES HARVESTED",
+                                                            "WHEAT - ACRES HARVESTED","RYE - ACRES HARVESTED"),]
+
+#These data from NASS have a comma in them and we have to remove it by
+#substituting "nothing" in the place of the comma. You will run into random problems like
+#this a lot and you will always get past it. . .somehow 
+smlgrains$Value<-as.numeric(gsub(",", "", smlgrains$Value))
+
+#Here is a glimpse of your future with an awesome package (dplyr)
+library(dplyr)
 total_smlgrains<-group_by(smlgrains, Year)%>%
   summarise(total=sum(Value))
-  
+
+#Check it out 
+plot(total_smlgrains$total~total_smlgrains$Year)
+
+#####################################################
+#Don't see many small grains these days, but I do see soybeans. I wonder about the 
+#relationship. Let's compare acre amounts
+
+#Back to beans and this time subset "acres harvested"
+bean_acres<-recent[recent$Commodity == "SOYBEANS" & 
+                     recent$`Data Item` == "SOYBEANS - ACRES HARVESTED",] 
+
+#Now let's work to get the "bean_acres" dataframe and "total_smlgrains" dataframe to 
+#look identical so we tack them together for a tidy result
+bean_acres<-bean_acres[,c(1,5)] #this is the information we actually need
+colnames(bean_acres)<-c("year", "acres")
+
+#Okay, should have left 'Commodity' in there, but now we don't 
+#have to have SOYBEANS shouted at us
+bean_acres$crop<-"soybeans" 
+
+#Make matching column names and "crop" label for total_smlgrains  
+colnames(total_smlgrains)<- c("year", "acres")
+total_smlgrains$crop<-"smlgrains"
+
+#Now, R, bind these rows together (rbind)
+both<-rbind(bean_acres, total_smlgrains)
+
+#Here's a story about cropland use in Iowa
+ggplot(both, aes(x=year, y=acres, group=crop, color=crop))+
+  geom_point()+
+  geom_smooth()+
+  ggtitle("Changes in small grain and soybean acres in Iowa")
+Contact GitHub API Training Shop Blog About
+© 2016 GitHub, Inc. Terms Privacy Security Status Help
