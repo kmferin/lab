@@ -1,4 +1,5 @@
 ###Dates, dplyr, tidyr
+library(lubridate)
 library(tidyverse)
 
 data_dictionary<-data.frame(variable = c("date", "rain", "soil_water", "soil_temp", "soy_yield", "maize_yield", "nh4",
@@ -17,12 +18,24 @@ future<-read_csv("future.csv", na = "?")
 
 #Use `qplot(x, y, data=future)` to explore a few simple relationships
 #Try `qplot(date, y, data=future) (may take a minute to print)
+yr_one_future = slice(future, 1:365)
+qplot(date, soil_temp, data = yr_one_future)
 
 #Change the dates to the proper format and plot again
-#Add a year column  
+new_date <- parse_date_time(future$date, orders = "dmy")
+future <- mutate(future, 
+                 date = parse_date_time(date, orders = "dmy"),
+                 year = year(date),
+                 month = month(date), 
+                 doy = yday(date))
+                 
+head(future)
+#Add a year column
+future["year"] <- year(future$date)
 #Add a month column  
+future["month"] <- month(future$date)
 #Add day of year  
-
+future["doy"] <- yday(future$date)
 #Sum rainfall ammounts for each year and plot across time
 #Find the average soil temp for each year  
 
